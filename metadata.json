@@ -1,0 +1,8 @@
+{
+  "name": "DyMonth AI Marketing Suite",
+  "description": "Premium Naver Place optimization and marketing automation SaaS platform for small businesses.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

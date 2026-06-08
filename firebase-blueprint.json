@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information and subscription usage state",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Firebase Auth uid of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's full name or screen name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user registered"
+        },
+        "usageCount": {
+          "type": "integer",
+          "description": "Number of times the user has generated AI content"
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["free", "premium"],
+          "description": "Subscription tier of the user"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "System role (user or admin)"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "usageCount", "tier", "role"]
+    },
+    "Generation": {
+      "title": "AI Generation Record",
+      "description": "Log of AI content generations and diagnostics performed",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique key or doc ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Creator user UID"
+        },
+        "userIdEmail": {
+          "type": "string",
+          "description": "Creator user email"
+        },
+        "toolId": {
+          "type": "string",
+          "description": "ID of the generator tool used"
+        },
+        "toolName": {
+          "type": "string",
+          "description": "System name of the generator tool"
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Map of key-value user inputs"
+        },
+        "outputs": {
+          "type": "string",
+          "description": "Raw string output containing Markdown details"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record was created"
+        },
+        "bookmarked": {
+          "type": "boolean",
+          "description": "Whether this generation was toggled as bookmarked/saved"
+        }
+      },
+      "required": ["id", "userId", "toolId", "toolName", "inputs", "outputs", "createdAt", "bookmarked"]
+    },
+    "ErrorLog": {
+      "title": "System Error Log",
+      "description": "Logging runtime details of errors for administrator oversight",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Log unique ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Active user UID"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error details"
+        },
+        "toolId": {
+          "type": "string",
+          "description": "Active tool ID if in context"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the error was encountered"
+        }
+      },
+      "required": ["id", "errorMessage", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Users of the marketing suite"
+    },
+    "/generations/{generationId}": {
+      "schema": "Generation",
+      "description": "AI content generation history and bookmarks"
+    },
+    "/errorLogs/{logId}": {
+      "schema": "ErrorLog",
+      "description": "Database errors or API connection failures"
+    }
+  }
+}

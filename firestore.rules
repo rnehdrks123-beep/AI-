@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Checking email of the current authenticated user
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "rnehdrks123@gmail.com"
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users Collection Rule Set
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Prevent users from setting themselves as admin or self-escalating subscription tiers
+      allow create: if isOwner(userId) && 
+        incoming().uid == userId &&
+        incoming().email is string &&
+        incoming().email.size() <= 128 &&
+        incoming().createdAt == request.time &&
+        incoming().usageCount == 0 &&
+        incoming().tier == "free" &&
+        incoming().role == "user";
+        
+      allow update: if (isOwner(userId) && 
+        incoming().uid == userId &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        // Forbid upgrading tier/role directly via client
+        incoming().tier == existing().tier &&
+        incoming().role == existing().role &&
+        incoming().usageCount is int &&
+        incoming().usageCount >= 0) 
+        || isAdmin();
+    }
+
+    // AI Generations Collection Rule Set
+    match /generations/{generationId} {
+      // List rules: do not delegate filtering to the client, enforce matching ownerId OR admin
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && 
+        incoming().userId == request.auth.uid &&
+        incoming().toolId is string &&
+        incoming().toolId.size() <= 64 &&
+        incoming().toolName is string &&
+        incoming().toolName.size() <= 128 &&
+        incoming().outputs is string &&
+        incoming().outputs.size() <= 200000 && // accommodate large AI outputs
+        incoming().createdAt == request.time &&
+        incoming().bookmarked is bool;
+
+      // Allow users to toggle bookmarked state, or admin full management
+      allow update: if (isSignedIn() && 
+        existing().userId == request.auth.uid &&
+        incoming().userId == request.auth.uid &&
+        incoming().toolId == existing().toolId &&
+        incoming().outputs == existing().outputs &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['bookmarked']))
+        || isAdmin();
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // ErrorLogs Rules for auditability
+    match /errorLogs/{logId} {
+      allow create: if true; // permit error reporting from anywhere
+      allow read: if isAdmin();
+    }
+  }
+}
